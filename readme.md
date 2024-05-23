@@ -7,13 +7,19 @@ BS架构的服务端采用Flask框架皆可，客户端采用HTML+JavaScript
 
 项目的目录如下所示
 /
+
 ├── app.py             主程序
+
 ├── backend/                      
-│   ├── pics/          用于考勤的图片底库   
-|   ├── temp/          存放前端抓取的临时图片
-|   └── record.txt     记录签到成功的结果
+│       ├── pics/          用于考勤的图片底库   
+
+|       ├── temp/          存放前端抓取的临时图片
+
+|       └── record.txt     记录签到成功的结果
+
 ├── templates/
-|   └── index.html     前端页面
+
+|       └── index.html     前端页面
 
 
 # Louis
