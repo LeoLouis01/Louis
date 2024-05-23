@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2rem;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group button {
+            margin-right: 1rem;
+        }
+
+        .form-group button.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        video {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+        }
+
+        canvas {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>考勤系统</h1>
+        <div class="form-group">
+            <label>检测方案:</label>
+            <button type="button" id="scheme1" class="scheme-btn">方案1</button>
+            <button type="button" id="scheme2" class="scheme-btn">方案2</button>
+            <input type="hidden" id="detection_scheme" required>
+        </div>
+        <div class="form-group">
+            <video id="video" autoplay></video>
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="form-group">
+            <button id="capture">签到</button>
+            <button id="submit" disabled>提交</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const schemeButtons = document.querySelectorAll('.scheme-btn');
+            const detectionSchemeInput = document.getElementById('detection_scheme');
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            const captureButton = document.getElementById('capture');
+            const submitButton = document.getElementById('submit');
+            const resultDiv = document.getElementById('result');
+
+            // 获取用户媒体（视频）
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("Error accessing webcam: ", err);
+                });
+
+            schemeButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    schemeButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    detectionSchemeInput.value = this.id;
+                    submitButton.disabled = false;
+                });
+            });
+
+            captureButton.addEventListener('click', function () {
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                submitButton.disabled = false;
+            });
+
+            submitButton.addEventListener('click', function () {
+                const dataUrl = canvas.toDataURL('image/jpeg');
+                const blob = dataURLToBlob(dataUrl);
+
+                const formData = new FormData();
+                formData.append('image', blob, 'capture.jpg');
+                formData.append('detection_scheme', detectionSchemeInput.value);
+
+                fetch('/check_attendance', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        resultDiv.innerHTML = '';
+                        if (data.names) {
+                            resultDiv.innerHTML = `<p>签到成功: ${data.names.join(', ')}</p>`;
+                        } else {
+                            resultDiv.innerHTML = `<p>${data.message}</p>`;
+                        }
+                    })
+                    .catch(error => {
+                        resultDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+                    });
+            });
+
+            function dataURLToBlob(dataUrl) {
+                const arr = dataUrl.split(','), mime = arr[0].match(/:(.*?);/)[1];
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                return new Blob([u8arr], { type: mime });
+            }
+        });
+    </script>
+</body>
+
+</html>
